@@ -59,15 +59,12 @@ def apply_AlphaEdit_to_model(
     if not os.path.exists(hparams.P_loc):
         print(os.path.abspath(hparams.P_loc))
         print(f"The null-space projection matrix P does not exist and now calculate.")
-        W_out = nethook.get_parameter(model, f"{hparams.rewrite_module_tmp.format(hparams.layers[-1])}.weight")
-        if "llama" in hparams.model_name.lower() or "gpt-j-6b" in hparams.model_name.lower():
-            P = torch.zeros((len(hparams.layers), W_out.shape[1], W_out.shape[1]), device="cpu")
-        elif "gpt2-xl" in hparams.model_name.lower():
-            P = torch.zeros((len(hparams.layers), W_out.shape[0], W_out.shape[0]), device="cpu")
-        del W_out
+        P_layers = []
         for i, layer in enumerate(hparams.layers):
-            P[i,:,:] = get_project(model, tok, layer, hparams)
-        torch.save(P, "null_space_project.pt")
+            P_layers.append(get_project(model, tok, layer, hparams))
+        P = torch.stack(P_layers).cpu()
+        os.makedirs(os.path.dirname(hparams.P_loc) or ".", exist_ok=True)
+        torch.save(P, hparams.P_loc)
         P_loaded = True
     elif P_loaded == False:
         P = torch.load(hparams.P_loc)

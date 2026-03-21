@@ -347,8 +347,10 @@ def get_project(model, tok, layer, hparams):
         force_recompute=force_recompute,
         hparams=hparams
     )
-    U, S, _ = torch.linalg.svd(cov, full_matrices=False)
+    cov_device = cov.to(f"cuda:{hparams.device}")
+    U, S, _ = torch.linalg.svd(cov_device, full_matrices=False)
     threshold = hparams.nullspace_threshold
     small_singular_indices = (S < threshold).nonzero(as_tuple=True)[0]
     print(len(small_singular_indices))
-    return U[:, small_singular_indices] @ U[:, small_singular_indices].T
+    result = U[:, small_singular_indices] @ U[:, small_singular_indices].T
+    return result.cpu()

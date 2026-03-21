@@ -215,9 +215,14 @@ def execute_AlphaEdit(
         repeat_factor = (layer_ks.size(1) // targets.size(1))
         targets = targets.repeat_interleave(repeat_factor, dim=1)
         resid = targets / (len(hparams.layers) - i)  # Distribute residual across layers
+        dev = f"cuda:{hparams.device}"
+        P_i = P[i,:,:].to(dev).float()
+        layer_ks_f = layer_ks.to(dev).float()
+        cache_c_i = cache_c[i,:,:].to(dev).float()
+        resid_f = resid.T.to(dev).float()
         upd_matrix = torch.linalg.solve(
-                P[i,:,:].to(f"cuda:{hparams.device}") @ (layer_ks.to(f"cuda:{hparams.device}") @ layer_ks.T.to(f"cuda:{hparams.device}") + cache_c[i,:,:].to(f"cuda:{hparams.device}")) + hparams.L2*torch.eye(layer_ks.shape[0], dtype=torch.float,device=f"cuda:{hparams.device}"),
-                P[i,:,:].to(f"cuda:{hparams.device}") @ layer_ks.to(f"cuda:{hparams.device}") @ resid.T.to(f"cuda:{hparams.device}")
+                P_i @ (layer_ks_f @ layer_ks_f.T + cache_c_i) + hparams.L2*torch.eye(layer_ks_f.shape[0], dtype=torch.float, device=dev),
+                P_i @ layer_ks_f @ resid_f
         )
 
         # Adjust update matrix shape

@@ -146,7 +146,8 @@ def execute_AlphaEdit(
     z_layer = hparams.layers[-1]
     z_list = []
 
-    for request in requests:
+    for ri, request in enumerate(requests):
+        print(f"Computing target vector {ri + 1}/{len(requests)}")
         # Retrieve k/v pair if already stored in cache
         cache_fname = (
             Path(

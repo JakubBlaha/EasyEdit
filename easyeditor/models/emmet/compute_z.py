@@ -90,20 +90,49 @@ def compute_z(
     def edit_output_fn(cur_out, cur_layer):
         nonlocal target_init
 
+        def _unwrap_output(output):
+            if isinstance(output, torch.Tensor):
+                return output, None
+            if isinstance(output, (list, tuple)):
+                if len(output) == 0:
+                    raise ValueError("Layer output container is empty.")
+                return output[0], output
+            raise TypeError(
+                f"Unsupported layer output type {type(output)} encountered in EMMET."
+            )
+
+        def _rewrap_output(updated, original):
+            if original is None:
+                return updated
+            if isinstance(original, list):
+                new_out = list(original)
+            elif isinstance(original, tuple):
+                new_out = list(original)
+            else:
+                raise TypeError(
+                    f"Unsupported layer output container {type(original)} in EMMET."
+                )
+            new_out[0] = updated
+            return type(original)(new_out) if isinstance(original, tuple) else new_out
+
         if cur_layer == hparams.layer_module_tmp.format(layer):
+            layer_output, original_container = _unwrap_output(cur_out)
+
             # Store initial value of the vector of interest
             if target_init is None:
                 print("Recording initial value of v*")
                 # Initial value is recorded for the clean sentence
-                target_init = cur_out[0][0, lookup_idxs[0]].detach().clone()
+                target_init = layer_output[0, lookup_idxs[0]].detach().clone()
 
             # Add intervened delta
             for i, idx in enumerate(lookup_idxs):
 
-                if len(lookup_idxs)!=len(cur_out[0]):
-                    cur_out[0][idx, i, :] += delta
+                if len(lookup_idxs)!=layer_output.shape[0]:
+                    layer_output[idx, i, :] += delta
                 else:
-                    cur_out[0][i, idx, :] += delta
+                    layer_output[i, idx, :] += delta
+
+            return _rewrap_output(layer_output, original_container)
 
         return cur_out
 

@@ -170,7 +170,11 @@ def compute_z(
 
         # Compute loss on rewriting targets
 
-        output=tr[hparams.layer_module_tmp.format(loss_layer)].output[0]
+        loss_layer_out = tr[hparams.layer_module_tmp.format(loss_layer)].output
+        if isinstance(loss_layer_out, (list, tuple)):
+            output = loss_layer_out[0]
+        else:
+            output = loss_layer_out
         if output.shape[1]!=rewriting_targets.shape[1]:
             output=torch.transpose(output, 0, 1)
         full_repr = output[:len(rewriting_prompts)]
